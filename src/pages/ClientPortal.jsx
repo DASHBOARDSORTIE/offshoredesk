@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { signOut } from "../lib/auth";
+import Agenda from "./Agenda";
 
 export default function ClientPortal({ user, onLogout }) {
   const [client, setClient] = useState(null);
@@ -17,10 +18,12 @@ export default function ClientPortal({ user, onLogout }) {
       .from("clients")
       .select("*, documents(*), tickets(*)")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
     if (data) {
       setClient(data);
       setTickets(data.tickets || []);
+    } else {
+      setClient("no_dossier");
     }
   }
 
@@ -40,16 +43,6 @@ export default function ClientPortal({ user, onLogout }) {
     loadClientData();
   }
 
-  const DOCS_LABELS = {
-    cni_recto: "CNI — Recto",
-    cni_verso: "CNI — Verso",
-    passeport: "Passeport",
-    justif_dom: "Justificatif de domicile",
-    releve_banque: "Relevé bancaire",
-    avis_impot: "Avis d'imposition",
-    selfie: "Selfie de vérification",
-  };
-
   const DOCS_REQUIS = [
     { type: "cni_recto", label: "CNI — Recto", icon: "🪪", info: "Face avant" },
     { type: "cni_verso", label: "CNI — Verso", icon: "🔄", info: "Face arrière" },
@@ -61,7 +54,23 @@ export default function ClientPortal({ user, onLogout }) {
 
   if (!client) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F7F6F3" }}>
-      <div style={{ fontSize: 14, color: "#8E8E93" }}>Chargement de votre dossier...</div>
+      <div style={{ fontSize: 14, color: "#8E8E93" }}>Chargement...</div>
+    </div>
+  );
+
+  if (client === "no_dossier") return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F7F6F3" }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: "40px 36px", width: 400, border: "1px solid #E5E5EA", textAlign: "center" }}>
+        <div style={{ fontSize: 40, marginBottom: 16 }}>⏳</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#1C1C1E", marginBottom: 8 }}>Dossier en cours de création</div>
+        <div style={{ fontSize: 14, color: "#8E8E93", marginBottom: 24 }}>
+          Votre espace client est prêt. Votre conseiller va créer votre dossier et vous notifier.
+        </div>
+        <button onClick={async () => { await signOut(); onLogout(); }}
+          style={{ fontSize: 13, color: "#8E8E93", background: "none", border: "none", cursor: "pointer" }}>
+          Se déconnecter
+        </button>
+      </div>
     </div>
   );
 
@@ -78,12 +87,12 @@ export default function ClientPortal({ user, onLogout }) {
         </div>
       </div>
 
-      <div style={{ maxWidth: 700, margin: "32px auto", padding: "0 20px" }}>
+      <div style={{ maxWidth: 750, margin: "32px auto", padding: "0 20px" }}>
         <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #E5E5EA", padding: "24px 28px", marginBottom: 20 }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: "#1C1C1E", marginBottom: 4 }}>Bonjour {client.prenom} 👋</div>
           <div style={{ fontSize: 13, color: "#8E8E93", marginBottom: 16 }}>{client.type_compte} · {client.pays}</div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
-            <span style={{ color: "#8E8E93" }}>Progression de votre dossier</span>
+            <span style={{ color: "#8E8E93" }}>Progression du dossier</span>
             <span style={{ fontWeight: 600 }}>{client.progression}%</span>
           </div>
           <div style={{ height: 7, background: "#F2F2F7", borderRadius: 99 }}>
@@ -91,8 +100,12 @@ export default function ClientPortal({ user, onLogout }) {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          {[{ id: "docs", label: "Mes documents" }, { id: "tickets", label: `Mes tickets (${tickets.length})` }].map(tab => (
+        <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+          {[
+            { id: "docs", label: "Mes documents" },
+            { id: "tickets", label: `Mes tickets (${tickets.length})` },
+            { id: "agenda", label: "📅 Prendre RDV" },
+          ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               style={{ padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: "1px solid", cursor: "pointer", borderColor: activeTab === tab.id ? "#1C1C1E" : "#E5E5EA", background: activeTab === tab.id ? "#1C1C1E" : "#fff", color: activeTab === tab.id ? "#fff" : "#8E8E93" }}>
               {tab.label}
@@ -105,15 +118,7 @@ export default function ClientPortal({ user, onLogout }) {
             <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1E", marginBottom: 16 }}>Vos documents</div>
             {DOCS_REQUIS.map(doc => {
               const existing = (client.documents || []).find(d => d.type === doc.type);
-              return (
-                <UploadDoc
-                  key={doc.type}
-                  doc={doc}
-                  existing={existing}
-                  clientId={client.id}
-                  onUploaded={loadClientData}
-                />
-              );
+              return <UploadDoc key={doc.type} doc={doc} existing={existing} clientId={client.id} onUploaded={loadClientData} />;
             })}
           </div>
         )}
@@ -127,7 +132,6 @@ export default function ClientPortal({ user, onLogout }) {
                 + Nouveau ticket
               </button>
             </div>
-
             {newTicket && (
               <div style={{ background: "#F7F6F3", borderRadius: 10, padding: 16, marginBottom: 16 }}>
                 <input placeholder="Sujet" value={ticketTitre} onChange={e => setTicketTitre(e.target.value)}
@@ -135,18 +139,11 @@ export default function ClientPortal({ user, onLogout }) {
                 <textarea placeholder="Votre message..." value={ticketMsg} onChange={e => setTicketMsg(e.target.value)} rows={3}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: 7, border: "1px solid #E5E5EA", fontSize: 13, resize: "none", boxSizing: "border-box" }} />
                 <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  <button onClick={envoyerTicket}
-                    style={{ fontSize: 12, padding: "6px 14px", borderRadius: 7, background: "#0A84FF", color: "#fff", border: "none", cursor: "pointer" }}>
-                    Envoyer
-                  </button>
-                  <button onClick={() => setNewTicket(false)}
-                    style={{ fontSize: 12, padding: "6px 14px", borderRadius: 7, background: "none", color: "#8E8E93", border: "1px solid #E5E5EA", cursor: "pointer" }}>
-                    Annuler
-                  </button>
+                  <button onClick={envoyerTicket} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 7, background: "#0A84FF", color: "#fff", border: "none", cursor: "pointer" }}>Envoyer</button>
+                  <button onClick={() => setNewTicket(false)} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 7, background: "none", color: "#8E8E93", border: "1px solid #E5E5EA", cursor: "pointer" }}>Annuler</button>
                 </div>
               </div>
             )}
-
             {tickets.map(ticket => (
               <div key={ticket.id} style={{ border: "1px solid #F2F2F7", borderRadius: 10, padding: "14px 16px", marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -159,10 +156,15 @@ export default function ClientPortal({ user, onLogout }) {
                 <div style={{ fontSize: 11, color: "#AEAEB2", marginTop: 6 }}>{ticket.created_at?.slice(0, 10)}</div>
               </div>
             ))}
-
             {tickets.length === 0 && !newTicket && (
               <div style={{ textAlign: "center", padding: "24px", color: "#AEAEB2", fontSize: 13 }}>Aucun ticket ouvert</div>
             )}
+          </div>
+        )}
+
+        {activeTab === "agenda" && (
+          <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #E5E5EA", padding: "20px 24px" }}>
+            <Agenda user={user} isAdmin={false} />
           </div>
         )}
       </div>
@@ -183,9 +185,7 @@ function UploadDoc({ doc, existing, clientId, onUploaded }) {
       const path = `${clientId}/${doc.type}_${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("documents").upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
-
       const { data: urlData } = supabase.storage.from("documents").getPublicUrl(path);
-
       await supabase.from("documents").upsert([{
         client_id: clientId,
         type: doc.type,
@@ -194,7 +194,6 @@ function UploadDoc({ doc, existing, clientId, onUploaded }) {
         statut: "ok",
         uploaded_at: new Date().toISOString(),
       }], { onConflict: "client_id,type" });
-
       onUploaded();
     } catch (err) {
       alert("Erreur : " + err.message);
@@ -208,9 +207,7 @@ function UploadDoc({ doc, existing, clientId, onUploaded }) {
       <div style={{ fontSize: 20 }}>{statut === "ok" ? "✅" : statut === "expire" ? "⚠️" : "❌"}</div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: "#1C1C1E" }}>{doc.label}</div>
-        <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>
-          {existing?.nom_fichier || doc.info}
-        </div>
+        <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>{existing?.nom_fichier || doc.info}</div>
       </div>
       <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500, background: statut === "ok" ? "#E8F9F0" : statut === "expire" ? "#FFF8EC" : "#FFF0EE", color: statut === "ok" ? "#1A7A4A" : statut === "expire" ? "#B7660A" : "#C0392B" }}>
         {statut === "ok" ? "Reçu" : statut === "expire" ? "Expiré" : "Manquant"}
