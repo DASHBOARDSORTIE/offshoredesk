@@ -10,6 +10,7 @@ import ClientDetail from "./pages/ClientDetail";
 import Tickets from "./pages/Tickets";
 import Onboarding from "./pages/Onboarding";
 import NewClient from "./pages/NewClient";
+import Agenda from "./pages/Agenda";
 
 const ADMIN_EMAIL = "stevemachado33@gmail.com";
 
@@ -63,6 +64,7 @@ export default function App() {
           {page === "tickets" && <Tickets navigate={navigate} />}
           {page === "onboarding" && <Onboarding navigate={navigate} />}
           {page === "new-client" && <NewClient navigate={navigate} />}
+          {page === "agenda" && <Agenda user={session.user} isAdmin={true} />}
         </main>
       </div>
     </div>
@@ -74,6 +76,7 @@ function Sidebar({ page, navigate }) {
     { id: "dashboard", label: "Vue globale" },
     { id: "clients", label: "Clients" },
     { id: "tickets", label: "Tickets" },
+    { id: "agenda", label: "Agenda" },
     { id: "onboarding", label: "Formulaire client" },
   ];
   return (
@@ -106,7 +109,10 @@ function Sidebar({ page, navigate }) {
 }
 
 function TopBar({ page, onLogout, user }) {
-  const titles = { dashboard: "Vue globale", clients: "Clients", "client-detail": "Dossier client", tickets: "Tickets", onboarding: "Formulaire", "new-client": "Nouveau dossier" };
+  const titles = {
+    dashboard: "Vue globale", clients: "Clients", "client-detail": "Dossier client",
+    tickets: "Tickets", onboarding: "Formulaire", "new-client": "Nouveau dossier", agenda: "Agenda"
+  };
   return (
     <div style={{ background: "#fff", borderBottom: "1px solid #E5E5EA", padding: "0 32px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
       <h1 style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1E", margin: 0 }}>{titles[page]}</h1>
