@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { DOCS_LABELS, STATUT_CONFIG } from "../lib/data";
-import { Avatar, Badge } from "./Dashboard";
 import { supabase } from "../lib/supabase";
 import Chat from "./Chat";
 import Timeline from "./Timeline";
@@ -117,7 +116,6 @@ export default function ClientDetail({ client, navigate }) {
   const initials = `${client.prenom[0]}${client.nom[0]}`;
   const statutActuel = statuts.find(s => s.nom === statutSelectionne);
   const docsManquantsCount = Object.keys(DOCS_LABELS).filter(key => !docs.find(d => d.type === key && d.statut === "ok")).length;
-
   const formatMontant = (val) => new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2 }).format(val);
 
   return (
@@ -127,7 +125,6 @@ export default function ClientDetail({ client, navigate }) {
         ← Retour aux clients
       </button>
 
-      {/* Header */}
       <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E5EA", padding: "24px 28px", marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
@@ -195,7 +192,6 @@ export default function ClientDetail({ client, navigate }) {
             </select>
           </div>
         </div>
-
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
           <div style={{ background: "#F0FFF4", borderRadius: 10, padding: "14px 16px" }}>
             <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 4 }}>Montant investi</div>
@@ -206,7 +202,6 @@ export default function ClientDetail({ client, navigate }) {
             <div style={{ fontSize: 20, fontWeight: 700, color: "#0A84FF" }}>{formatMontant(montantRecu)} {devise}</div>
           </div>
         </div>
-
         <button onClick={sauvegarderMontants} disabled={savingMontants}
           style={{ padding: "9px 20px", borderRadius: 8, background: savingMontants ? "#AEAEB2" : "#1C1C1E", color: "#fff", border: "none", fontSize: 13, fontWeight: 500, cursor: savingMontants ? "default" : "pointer" }}>
           {savingMontants ? "Sauvegarde..." : "Sauvegarder"}
@@ -370,5 +365,25 @@ export default function ClientDetail({ client, navigate }) {
         </div>
       )}
     </div>
+  );
+}
+
+function Avatar({ initials, size = 34 }) {
+  const colors = ["#E8F0FF", "#E8F9F0", "#FFF8EC", "#FEF0F0", "#F0EEFF"];
+  const textColors = ["#1B4FD8", "#1A7A4A", "#B7660A", "#C0392B", "#5B21B6"];
+  const idx = initials.charCodeAt(0) % 5;
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: colors[idx], color: textColors[idx], display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.35, fontWeight: 600, flexShrink: 0 }}>
+      {initials}
+    </div>
+  );
+}
+
+function Badge({ cfg }) {
+  if (!cfg) return null;
+  return (
+    <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500, background: cfg.bg, color: cfg.color, whiteSpace: "nowrap" }}>
+      {cfg.label}
+    </span>
   );
 }
