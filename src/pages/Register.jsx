@@ -21,15 +21,18 @@ export default function Register({ onRegister }) {
 
     setLoading(true);
     try {
-      const { data } = await signUp(email, password);
+      const { data, error: signUpError } = await signUp(email, password);
+      if (signUpError) throw signUpError;
+
       if (data?.user) {
-        await supabase.from("profils").insert([{
+        const { error: profilError } = await supabase.from("profils").insert([{
           user_id: data.user.id,
           email,
           nom,
           prenom,
           tel,
         }]);
+        if (profilError) throw new Error("Erreur profil : " + profilError.message);
       }
       setSuccess(true);
     } catch (e) {
@@ -61,7 +64,11 @@ export default function Register({ onRegister }) {
         <div style={{ fontSize: 24, fontWeight: 700, color: "#1C1C1E", marginBottom: 6 }}>Créer un compte</div>
         <div style={{ fontSize: 14, color: "#8E8E93", marginBottom: 28 }}>Accédez à votre espace client</div>
 
-        {error && <div style={{ background: "#FFF0EE", color: "#C0392B", padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{error}</div>}
+        {error && (
+          <div style={{ background: "#FFF0EE", color: "#C0392B", padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
           <div>
@@ -108,7 +115,9 @@ export default function Register({ onRegister }) {
 
         <div style={{ textAlign: "center" }}>
           <span style={{ fontSize: 13, color: "#8E8E93" }}>Déjà un compte ? </span>
-          <button onClick={onRegister} style={{ fontSize: 13, color: "#0A84FF", background: "none", border: "none", cursor: "pointer" }}>Se connecter</button>
+          <button onClick={onRegister} style={{ fontSize: 13, color: "#0A84FF", background: "none", border: "none", cursor: "pointer" }}>
+            Se connecter
+          </button>
         </div>
       </div>
     </div>
