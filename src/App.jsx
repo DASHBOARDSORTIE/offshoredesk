@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, createContext } from "react";
 import { supabase } from "./lib/supabase";
 import { signOut } from "./lib/auth";
 import Login from "./pages/Login";
@@ -13,10 +13,6 @@ import NewClient from "./pages/NewClient";
 import Agenda from "./pages/Agenda";
 
 const ADMIN_EMAIL = "stevemachado33@gmail.com";
-
-export const ThemeContext = React.createContext({ dark: false });
-
-import React from "react";
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -68,23 +64,21 @@ export default function App() {
   if (!isAdmin) return <ClientPortal user={session.user} onLogout={() => signOut()} />;
 
   return (
-    <ThemeContext.Provider value={{ dark, t }}>
-      <div style={{ minHeight: "100vh", background: t.bg, fontFamily: "'Inter', system-ui, sans-serif", transition: "background 0.2s" }}>
-        <Sidebar page={page} navigate={navigate} t={t} dark={dark} />
-        <div style={{ marginLeft: 220, minHeight: "100vh" }}>
-          <TopBar page={page} onLogout={() => signOut()} user={session.user} navigate={navigate} t={t} dark={dark} setDark={setDark} />
-          <main style={{ padding: "28px 32px" }}>
-            {page === "dashboard" && <Dashboard navigate={navigate} t={t} dark={dark} />}
-            {page === "clients" && <Clients navigate={navigate} t={t} />}
-            {page === "client-detail" && <ClientDetail client={selectedClient} navigate={navigate} />}
-            {page === "tickets" && <Tickets navigate={navigate} t={t} />}
-            {page === "onboarding" && <Onboarding navigate={navigate} />}
-            {page === "new-client" && <NewClient navigate={navigate} />}
-            {page === "agenda" && <Agenda user={session.user} isAdmin={true} />}
-          </main>
-        </div>
+    <div style={{ minHeight: "100vh", background: t.bg, fontFamily: "'Inter', system-ui, sans-serif", transition: "background 0.2s" }}>
+      <Sidebar page={page} navigate={navigate} t={t} dark={dark} />
+      <div style={{ marginLeft: 220, minHeight: "100vh" }}>
+        <TopBar page={page} onLogout={() => signOut()} user={session.user} navigate={navigate} t={t} dark={dark} setDark={setDark} />
+        <main style={{ padding: "28px 32px" }}>
+          {page === "dashboard" && <Dashboard navigate={navigate} t={t} dark={dark} />}
+          {page === "clients" && <Clients navigate={navigate} t={t} />}
+          {page === "client-detail" && <ClientDetail client={selectedClient} navigate={navigate} />}
+          {page === "tickets" && <Tickets navigate={navigate} t={t} />}
+          {page === "onboarding" && <Onboarding navigate={navigate} />}
+          {page === "new-client" && <NewClient navigate={navigate} />}
+          {page === "agenda" && <Agenda user={session.user} isAdmin={true} />}
+        </main>
       </div>
-    </ThemeContext.Provider>
+    </div>
   );
 }
 
@@ -104,20 +98,18 @@ function Sidebar({ page, navigate, t, dark }) {
       padding: "0 0 20px", zIndex: 100, transition: "background 0.2s",
       borderRight: `1px solid ${dark ? "#1C1C1E" : "#2C2C2E"}`
     }}>
-      {/* Logo */}
       <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${dark ? "#1C1C1E" : "#2C2C2E"}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #0A84FF, #BF5AF2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
             🏦
           </div>
           <div>
-            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, letterSpacing: "-0.3px" }}>OffshoreDesk</div>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>OffshoreDesk</div>
             <div style={{ color: "#6E6E73", fontSize: 10, marginTop: 1 }}>Admin</div>
           </div>
         </div>
       </div>
 
-      {/* Nav */}
       <nav style={{ flex: 1, padding: "12px 10px" }}>
         {items.map(item => (
           <button key={item.id} onClick={() => navigate(item.id)}
@@ -127,23 +119,21 @@ function Sidebar({ page, navigate, t, dark }) {
               background: page === item.id ? t.sidebarActive : "transparent",
               color: page === item.id ? "#fff" : "#8E8E93",
               fontSize: 13, fontWeight: page === item.id ? 500 : 400,
-              marginBottom: 2, textAlign: "left", transition: "all 0.15s"
+              marginBottom: 2, textAlign: "left"
             }}>
-            <span style={{ fontSize: 14 }}>{item.emoji}</span>
+            <span>{item.emoji}</span>
             {item.label}
             {page === item.id && <div style={{ marginLeft: "auto", width: 4, height: 4, borderRadius: "50%", background: "#0A84FF" }} />}
           </button>
         ))}
       </nav>
 
-      {/* Bottom */}
       <div style={{ padding: "0 10px" }}>
         <button onClick={() => navigate("new-client")}
           style={{
             width: "100%", padding: "10px 12px", borderRadius: 8,
             background: "linear-gradient(135deg, #0A84FF, #BF5AF2)",
-            border: "none", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(10, 132, 255, 0.3)"
+            border: "none", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer"
           }}>
           + Nouveau client
         </button>
@@ -181,7 +171,7 @@ function TopBar({ page, onLogout, user, navigate, t, dark, setDark }) {
       background: t.card, borderBottom: `1px solid ${t.border}`,
       padding: "0 32px", height: 56, display: "flex", alignItems: "center",
       justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50,
-      transition: "background 0.2s"
+      transition: "all 0.2s"
     }}>
       <h1 style={{ fontSize: 16, fontWeight: 700, color: t.text, margin: 0 }}>{titles[page]}</h1>
 
@@ -195,7 +185,7 @@ function TopBar({ page, onLogout, user, navigate, t, dark, setDark }) {
           style={{
             width: "100%", padding: "8px 14px", borderRadius: 20,
             border: `1px solid ${t.border}`, fontSize: 13, boxSizing: "border-box",
-            background: t.bgSub, outline: "none", color: t.text, transition: "all 0.2s"
+            background: t.bgSub, outline: "none", color: t.text
           }}
         />
         {showResults && results.length > 0 && (
@@ -203,14 +193,14 @@ function TopBar({ page, onLogout, user, navigate, t, dark, setDark }) {
             {results.map(client => (
               <div key={client.id}
                 onMouseDown={() => { navigate("client-detail", client); setSearch(""); setShowResults(false); }}
-                style={{ padding: "10px 14px", cursor: "pointer", borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 10, color: t.text }}
+                style={{ padding: "10px 14px", cursor: "pointer", borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 10 }}
                 onMouseEnter={e => e.currentTarget.style.background = t.bgSub}
                 onMouseLeave={e => e.currentTarget.style.background = t.card}>
-                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, #0A84FF22, #BF5AF222)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#0A84FF", flexShrink: 0 }}>
+                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#0A84FF22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#0A84FF", flexShrink: 0 }}>
                   {client.prenom[0]}{client.nom[0]}
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{client.prenom} {client.nom}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: t.text }}>{client.prenom} {client.nom}</div>
                   <div style={{ fontSize: 11, color: t.textSub }}>{client.email} · {client.pays}</div>
                 </div>
               </div>
