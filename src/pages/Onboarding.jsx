@@ -101,12 +101,18 @@ export default function Onboarding({ navigate }) {
         )}
 
         {etape === 1 && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             {paysFiltered.map(pays => (
               <button key={pays.nom} onClick={() => update("pays", pays.nom)}
-                style={{ padding: "16px", borderRadius: 10, cursor: "pointer", textAlign: "left", border: `2px solid ${form.pays === pays.nom ? "#0A84FF" : "#E5E5EA"}`, background: form.pays === pays.nom ? "#F0F7FF" : "#fff" }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1C1E", marginBottom: 6 }}>{pays.nom}</div>
-                <div style={{ fontSize: 11, color: "#8E8E93" }}>Délai : {pays.delai} · {pays.frais}</div>
+                style={{
+                  padding: "20px 16px", borderRadius: 10, cursor: "pointer", textAlign: "center",
+                  border: `2px solid ${form.pays === pays.nom ? "#0A84FF" : "#E5E5EA"}`,
+                  background: form.pays === pays.nom ? "#F0F7FF" : "#fff"
+                }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>{pays.flag}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1C1E", marginBottom: 4 }}>{pays.nom}</div>
+                <div style={{ fontSize: 11, color: "#8E8E93" }}>Délai : {pays.delai}</div>
+                <div style={{ fontSize: 11, color: "#8E8E93" }}>{pays.frais}</div>
               </button>
             ))}
           </div>

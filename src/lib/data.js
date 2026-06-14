@@ -7,10 +7,13 @@ export const CLIENTS = [
     tel: "+33 6 12 34 56 78",
     adresse: "10 Chemin des Bouchets, 03410 Domérat",
     type_compte: "Nominatif",
-    pays: "Estonie",
+    pays: "Belgique",
     statut: "doc_manquant",
     progression: 60,
     date_creation: "2026-05-03",
+    montant_investi: 0,
+    montant_recu: 0,
+    devise: "EUR",
     docs: {
       cni: { statut: "ok", nom: "CNI_pinheiro.pdf", date: "2026-05-03" },
       justif_dom: { statut: "ok", nom: "JustifDom_pinheiro.pdf", date: "2026-05-03" },
@@ -30,10 +33,13 @@ export const CLIENTS = [
     tel: "+33 6 98 76 54 32",
     adresse: "14 Rue des Lilas, 75011 Paris",
     type_compte: "Anonyme",
-    pays: "Géorgie",
+    pays: "Malte",
     statut: "complet",
     progression: 100,
     date_creation: "2026-04-20",
+    montant_investi: 0,
+    montant_recu: 0,
+    devise: "EUR",
     docs: {
       cni: { statut: "ok", nom: "CNI_beaudoin.pdf", date: "2026-04-20" },
       justif_dom: { statut: "ok", nom: "JustifDom_beaudoin.pdf", date: "2026-04-20" },
@@ -41,9 +47,7 @@ export const CLIENTS = [
       selfie: { statut: "ok", nom: "Selfie_beaudoin.jpg", date: "2026-04-21" },
       avis_impot: { statut: "ok", nom: "AvisImpot_beaudoin.pdf", date: "2026-04-22" },
     },
-    tickets: [
-      { id: 102, titre: "Confirmation ouverture compte", statut: "resolu", priorite: "normal", auteur: "client", date: "2026-05-10", message: "Mon compte a-t-il bien été ouvert ?" }
-    ]
+    tickets: []
   },
   {
     id: 3,
@@ -53,10 +57,13 @@ export const CLIENTS = [
     tel: "+33 7 11 22 33 44",
     adresse: "8 Avenue Jean Jaurès, 69007 Lyon",
     type_compte: "Nominatif",
-    pays: "EME (Emirats)",
+    pays: "Hollande",
     statut: "en_attente",
     progression: 80,
     date_creation: "2026-05-15",
+    montant_investi: 0,
+    montant_recu: 0,
+    devise: "EUR",
     docs: {
       cni: { statut: "ok", nom: "CNI_letuan.pdf", date: "2026-05-15" },
       justif_dom: { statut: "ok", nom: "JustifDom_letuan.pdf", date: "2026-05-15" },
@@ -64,63 +71,19 @@ export const CLIENTS = [
       selfie: { statut: "ok", nom: "Selfie_letuan.jpg", date: "2026-05-17" },
       avis_impot: { statut: "expire", nom: "AvisImpot_letuan.pdf", date: "2025-04-10" },
     },
-    tickets: [
-      { id: 103, titre: "Document expiré — avis d'impôt", statut: "ouvert", priorite: "normal", auteur: "admin", date: "2026-06-11", message: "Votre avis d'imposition est expiré (2025). Merci de fournir celui de 2026." }
-    ]
-  },
-  {
-    id: 4,
-    nom: "Darda",
-    prenom: "Nicolas",
-    email: "n.darda@icloud.com",
-    tel: "+33 6 55 44 33 22",
-    adresse: "22 Rue du Faubourg, 67000 Strasbourg",
-    type_compte: "Anonyme",
-    pays: "Seychelles",
-    statut: "complet",
-    progression: 100,
-    date_creation: "2026-04-05",
-    docs: {
-      cni: { statut: "ok", nom: "CNI_darda.pdf", date: "2026-04-05" },
-      justif_dom: { statut: "ok", nom: "JustifDom_darda.pdf", date: "2026-04-05" },
-      releve_banque: { statut: "ok", nom: "Releve_darda.pdf", date: "2026-04-06" },
-      selfie: { statut: "ok", nom: "Selfie_darda.jpg", date: "2026-04-06" },
-      avis_impot: { statut: "ok", nom: "AvisImpot_darda.pdf", date: "2026-04-07" },
-    },
     tickets: []
   },
-  {
-    id: 5,
-    nom: "Roy",
-    prenom: "Sandrine",
-    email: "s.roy@yahoo.fr",
-    tel: "+33 6 78 90 12 34",
-    adresse: "5 Place Bellecour, 69002 Lyon",
-    type_compte: "Nominatif",
-    pays: "Malte",
-    statut: "doc_manquant",
-    progression: 40,
-    date_creation: "2026-06-01",
-    docs: {
-      cni: { statut: "ok", nom: "CNI_roy.pdf", date: "2026-06-01" },
-      justif_dom: { statut: "manquant", nom: null, date: null },
-      releve_banque: { statut: "manquant", nom: null, date: null },
-      selfie: { statut: "manquant", nom: null, date: null },
-      avis_impot: { statut: "manquant", nom: null, date: null },
-    },
-    tickets: []
-  }
 ];
 
 export const PAYS_DISPONIBLES = [
-  { nom: "Belgique", type: ["Nominatif", "Anonyme"], delai: "15mn-2 jours" },
-  { nom: "Malte", type: ["Nominatif"], delai: "30mn-2jours" },
-  { nom: "Hollande", type: ["Nominatif", "Anonyme"], delai: "30mn-2jours" },
-  { nom: "Estonie", type: ["Nominatif", "Anonyme"], delai: "30mn-2jours" }
+  { nom: "Belgique", type: ["Nominatif", "Anonyme"], delai: "5-7 jours", frais: "150€", flag: "🇧🇪" },
+  { nom: "Malte", type: ["Nominatif"], delai: "7-14 jours", frais: "250€", flag: "🇲🇹" },
+  { nom: "Hollande", type: ["Nominatif", "Anonyme"], delai: "5-7 jours", frais: "150€", flag: "🇳🇱" },
 ];
 
 export const DOCS_LABELS = {
-  cni: "CNI / Passeport",
+  cni_recto: "CNI — Recto",
+  cni_verso: "CNI — Verso",
   justif_dom: "Justificatif de domicile",
   releve_banque: "Relevé bancaire (3 mois)",
   selfie: "Selfie + CNI + date du jour",
