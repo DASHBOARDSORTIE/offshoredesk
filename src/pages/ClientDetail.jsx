@@ -18,6 +18,10 @@ export default function ClientDetail({ client, navigate }) {
   const [docs, setDocs] = useState(client?.documents || []);
   const [msgNonLus, setMsgNonLus] = useState(0);
   const [rappelEnvoi, setRappelEnvoi] = useState(false);
+  const [montantInvesti, setMontantInvesti] = useState(client?.montant_investi || 0);
+  const [montantRecu, setMontantRecu] = useState(client?.montant_recu || 0);
+  const [devise, setDevise] = useState(client?.devise || "EUR");
+  const [savingMontants, setSavingMontants] = useState(false);
 
   useEffect(() => {
     loadStatuts();
@@ -43,22 +47,31 @@ export default function ClientDetail({ client, navigate }) {
     setSavingNotes(true);
     await supabase.from("clients").update({ notes_internes: notesInternes }).eq("id", client.id);
     await supabase.from("timeline").insert([{
-      client_id: client.id,
-      type: "note",
-      description: "Note interne mise à jour",
-      auteur: "admin"
+      client_id: client.id, type: "note", description: "Note interne mise à jour", auteur: "admin"
     }]);
     setSavingNotes(false);
+  }
+
+  async function sauvegarderMontants() {
+    setSavingMontants(true);
+    await supabase.from("clients").update({
+      montant_investi: montantInvesti,
+      montant_recu: montantRecu,
+      devise
+    }).eq("id", client.id);
+    await supabase.from("timeline").insert([{
+      client_id: client.id, type: "statut",
+      description: `Montants mis à jour — Investi : ${montantInvesti} ${devise} · Reçu : ${montantRecu} ${devise}`,
+      auteur: "admin"
+    }]);
+    setSavingMontants(false);
   }
 
   async function changerStatut(statut) {
     setStatutSelectionne(statut);
     await supabase.from("clients").update({ statut_custom: statut }).eq("id", client.id);
     await supabase.from("timeline").insert([{
-      client_id: client.id,
-      type: "statut",
-      description: `Statut changé en : ${statut}`,
-      auteur: "admin"
+      client_id: client.id, type: "statut", description: `Statut changé en : ${statut}`, auteur: "admin"
     }]);
   }
 
@@ -67,21 +80,15 @@ export default function ClientDetail({ client, navigate }) {
     const docsManquants = Object.entries(DOCS_LABELS)
       .filter(([key]) => !docs.find(d => d.type === key && d.statut === "ok"))
       .map(([_, label]) => label);
-
     await supabase.from("messages").insert([{
-      client_id: client.id,
-      auteur: "admin",
-      contenu: `👋 Bonjour ${client.prenom},\n\nNous attendons encore les documents suivants pour votre dossier :\n\n${docsManquants.map(d => `• ${d}`).join("\n")}\n\nMerci de les uploader dès que possible dans votre espace client.\n\nCordialement,\nVotre conseiller`,
+      client_id: client.id, auteur: "admin",
+      contenu: `👋 Bonjour ${client.prenom},\n\nNous attendons encore les documents suivants :\n\n${docsManquants.map(d => `• ${d}`).join("\n")}\n\nMerci de les uploader dès que possible.\n\nCordialement,\nVotre conseiller`,
       lu: false
     }]);
-
     await supabase.from("timeline").insert([{
-      client_id: client.id,
-      type: "message",
-      description: `Rappel automatique envoyé (${docsManquants.length} document(s) manquant(s))`,
-      auteur: "admin"
+      client_id: client.id, type: "message",
+      description: `Rappel automatique envoyé (${docsManquants.length} doc(s) manquant(s))`, auteur: "admin"
     }]);
-
     setRappelEnvoi(false);
     setActiveTab("chat");
   }
@@ -95,22 +102,12 @@ export default function ClientDetail({ client, navigate }) {
   async function creerTicket() {
     if (!newTicketTitre || !newTicketMsg) return;
     await supabase.from("tickets").insert([{
-      client_id: client.id,
-      titre: newTicketTitre,
-      message: newTicketMsg,
-      auteur: "admin",
-      statut: "ouvert",
-      priorite: "normal"
+      client_id: client.id, titre: newTicketTitre, message: newTicketMsg, auteur: "admin", statut: "ouvert", priorite: "normal"
     }]);
     await supabase.from("timeline").insert([{
-      client_id: client.id,
-      type: "ticket",
-      description: `Ticket créé : "${newTicketTitre}"`,
-      auteur: "admin"
+      client_id: client.id, type: "ticket", description: `Ticket créé : "${newTicketTitre}"`, auteur: "admin"
     }]);
-    setNewTicketTitre("");
-    setNewTicketMsg("");
-    setNewTicketOpen(false);
+    setNewTicketTitre(""); setNewTicketMsg(""); setNewTicketOpen(false);
     const { data } = await supabase.from("tickets").select("*").eq("client_id", client.id);
     setTickets(data || []);
   }
@@ -121,6 +118,8 @@ export default function ClientDetail({ client, navigate }) {
   const statutActuel = statuts.find(s => s.nom === statutSelectionne);
   const docsManquantsCount = Object.keys(DOCS_LABELS).filter(key => !docs.find(d => d.type === key && d.statut === "ok")).length;
 
+  const formatMontant = (val) => new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2 }).format(val);
+
   return (
     <div>
       <button onClick={() => navigate("clients")}
@@ -128,6 +127,7 @@ export default function ClientDetail({ client, navigate }) {
         ← Retour aux clients
       </button>
 
+      {/* Header */}
       <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E5EA", padding: "24px 28px", marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
@@ -151,7 +151,7 @@ export default function ClientDetail({ client, navigate }) {
             {docsManquantsCount > 0 && (
               <button onClick={envoyerRappel} disabled={rappelEnvoi}
                 style={{ fontSize: 12, padding: "6px 12px", borderRadius: 7, background: rappelEnvoi ? "#AEAEB2" : "#FF9F0A", color: "#fff", border: "none", cursor: rappelEnvoi ? "default" : "pointer" }}>
-                {rappelEnvoi ? "Envoi..." : `📨 Rappel (${docsManquantsCount} docs manquants)`}
+                {rappelEnvoi ? "Envoi..." : `📨 Rappel (${docsManquantsCount} docs)`}
               </button>
             )}
           </div>
@@ -159,15 +159,61 @@ export default function ClientDetail({ client, navigate }) {
 
         <div style={{ marginTop: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
-            <span style={{ color: "#8E8E93" }}>Progression du dossier</span>
-            <span style={{ fontWeight: 600, color: "#1C1C1E" }}>{client.progression}%</span>
+            <span style={{ color: "#8E8E93" }}>Progression</span>
+            <span style={{ fontWeight: 600 }}>{client.progression}%</span>
           </div>
           <div style={{ height: 7, background: "#F2F2F7", borderRadius: 99 }}>
-            <div style={{ height: 7, borderRadius: 99, width: `${client.progression}%`, background: client.progression === 100 ? "#30D158" : client.progression >= 70 ? "#0A84FF" : "#FF9F0A" }} />
+            <div style={{ height: 7, borderRadius: 99, width: `${client.progression}%`, background: client.progression === 100 ? "#30D158" : "#0A84FF" }} />
           </div>
         </div>
       </div>
 
+      {/* Montants */}
+      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E5EA", padding: "20px 24px", marginBottom: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1C1E", marginBottom: 16 }}>💰 Montants</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px", gap: 12, marginBottom: 14 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#8E8E93", marginBottom: 6 }}>Montant investi</label>
+            <input type="number" value={montantInvesti} onChange={e => setMontantInvesti(e.target.value)}
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13, boxSizing: "border-box" }} />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#8E8E93", marginBottom: 6 }}>Montant reçu</label>
+            <input type="number" value={montantRecu} onChange={e => setMontantRecu(e.target.value)}
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13, boxSizing: "border-box" }} />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#8E8E93", marginBottom: 6 }}>Devise</label>
+            <select value={devise} onChange={e => setDevise(e.target.value)}
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13, boxSizing: "border-box" }}>
+              <option>EUR</option>
+              <option>USD</option>
+              <option>GBP</option>
+              <option>CHF</option>
+              <option>USDT</option>
+              <option>BTC</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+          <div style={{ background: "#F0FFF4", borderRadius: 10, padding: "14px 16px" }}>
+            <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 4 }}>Montant investi</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#1A7A4A" }}>{formatMontant(montantInvesti)} {devise}</div>
+          </div>
+          <div style={{ background: "#F0F7FF", borderRadius: 10, padding: "14px 16px" }}>
+            <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 4 }}>Montant reçu</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#0A84FF" }}>{formatMontant(montantRecu)} {devise}</div>
+          </div>
+        </div>
+
+        <button onClick={sauvegarderMontants} disabled={savingMontants}
+          style={{ padding: "9px 20px", borderRadius: 8, background: savingMontants ? "#AEAEB2" : "#1C1C1E", color: "#fff", border: "none", fontSize: 13, fontWeight: 500, cursor: savingMontants ? "default" : "pointer" }}>
+          {savingMontants ? "Sauvegarde..." : "Sauvegarder"}
+        </button>
+      </div>
+
+      {/* Statuts */}
       <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E5EA", padding: "16px 20px", marginBottom: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1C1E", marginBottom: 12 }}>Statut du dossier</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -180,6 +226,7 @@ export default function ClientDetail({ client, navigate }) {
         </div>
       </div>
 
+      {/* Tabs */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
         {[
           { id: "docs", label: "Documents KYC" },
@@ -292,7 +339,7 @@ export default function ClientDetail({ client, navigate }) {
           <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1E", marginBottom: 6 }}>Notes internes</div>
           <div style={{ fontSize: 12, color: "#8E8E93", marginBottom: 16 }}>Visibles uniquement par vous</div>
           <textarea value={notesInternes} onChange={e => setNotesInternes(e.target.value)}
-            placeholder="Ex: Client contacté le 12/06, en attente de son relevé BNP..."
+            placeholder="Ex: Client contacté le 12/06..."
             rows={8}
             style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13, resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
           <button onClick={sauvegarderNotes} disabled={savingNotes}
@@ -311,6 +358,8 @@ export default function ClientDetail({ client, navigate }) {
             { label: "Adresse", value: client.adresse },
             { label: "Type de compte", value: client.type_compte },
             { label: "Pays / Juridiction", value: client.pays },
+            { label: "Montant investi", value: `${formatMontant(montantInvesti)} ${devise}` },
+            { label: "Montant reçu", value: `${formatMontant(montantRecu)} ${devise}` },
             { label: "Date de création", value: client.created_at?.slice(0, 10) },
           ].map(({ label, value }, i, arr) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < arr.length - 1 ? "1px solid #F2F2F7" : "none" }}>
