@@ -14,12 +14,28 @@ import Agenda from "./pages/Agenda";
 
 const ADMIN_EMAIL = "stevemachado33@gmail.com";
 
+export const ThemeContext = React.createContext({ dark: false });
+
+import React from "react";
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showRegister, setShowRegister] = useState(false);
   const [page, setPage] = useState("dashboard");
   const [selectedClient, setSelectedClient] = useState(null);
+  const [dark, setDark] = useState(false);
+
+  const t = {
+    bg: dark ? "#0D0D0F" : "#F7F6F3",
+    card: dark ? "#1C1C1E" : "#fff",
+    border: dark ? "#2C2C2E" : "#E5E5EA",
+    text: dark ? "#fff" : "#1C1C1E",
+    textSub: dark ? "#8E8E93" : "#8E8E93",
+    bgSub: dark ? "#2C2C2E" : "#F7F6F3",
+    sidebar: dark ? "#000" : "#1C1C1E",
+    sidebarActive: dark ? "#1C1C1E" : "#2C2C2E",
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -38,7 +54,7 @@ export default function App() {
   };
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F7F6F3" }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0D0D0F" }}>
       <div style={{ fontSize: 14, color: "#8E8E93" }}>Chargement...</div>
     </div>
   );
@@ -52,54 +68,83 @@ export default function App() {
   if (!isAdmin) return <ClientPortal user={session.user} onLogout={() => signOut()} />;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F7F6F3", fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <Sidebar page={page} navigate={navigate} />
-      <div style={{ marginLeft: 220, minHeight: "100vh" }}>
-        <TopBar page={page} onLogout={() => signOut()} user={session.user} navigate={navigate} />
-        <main style={{ padding: "28px 32px" }}>
-          {page === "dashboard" && <Dashboard navigate={navigate} />}
-          {page === "clients" && <Clients navigate={navigate} />}
-          {page === "client-detail" && <ClientDetail client={selectedClient} navigate={navigate} />}
-          {page === "tickets" && <Tickets navigate={navigate} />}
-          {page === "onboarding" && <Onboarding navigate={navigate} />}
-          {page === "new-client" && <NewClient navigate={navigate} />}
-          {page === "agenda" && <Agenda user={session.user} isAdmin={true} />}
-        </main>
+    <ThemeContext.Provider value={{ dark, t }}>
+      <div style={{ minHeight: "100vh", background: t.bg, fontFamily: "'Inter', system-ui, sans-serif", transition: "background 0.2s" }}>
+        <Sidebar page={page} navigate={navigate} t={t} dark={dark} />
+        <div style={{ marginLeft: 220, minHeight: "100vh" }}>
+          <TopBar page={page} onLogout={() => signOut()} user={session.user} navigate={navigate} t={t} dark={dark} setDark={setDark} />
+          <main style={{ padding: "28px 32px" }}>
+            {page === "dashboard" && <Dashboard navigate={navigate} t={t} dark={dark} />}
+            {page === "clients" && <Clients navigate={navigate} t={t} />}
+            {page === "client-detail" && <ClientDetail client={selectedClient} navigate={navigate} />}
+            {page === "tickets" && <Tickets navigate={navigate} t={t} />}
+            {page === "onboarding" && <Onboarding navigate={navigate} />}
+            {page === "new-client" && <NewClient navigate={navigate} />}
+            {page === "agenda" && <Agenda user={session.user} isAdmin={true} />}
+          </main>
+        </div>
       </div>
-    </div>
+    </ThemeContext.Provider>
   );
 }
 
-function Sidebar({ page, navigate }) {
+function Sidebar({ page, navigate, t, dark }) {
   const items = [
-    { id: "dashboard", label: "Vue globale" },
-    { id: "clients", label: "Clients" },
-    { id: "tickets", label: "Tickets" },
-    { id: "agenda", label: "Agenda" },
-    { id: "onboarding", label: "Formulaire client" },
+    { id: "dashboard", label: "Vue globale", emoji: "⬛" },
+    { id: "clients", label: "Clients", emoji: "👥" },
+    { id: "tickets", label: "Tickets", emoji: "🎫" },
+    { id: "agenda", label: "Agenda", emoji: "📅" },
+    { id: "onboarding", label: "Formulaire", emoji: "📋" },
   ];
+
   return (
-    <div style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: 220, background: "#1C1C1E", display: "flex", flexDirection: "column", padding: "0 0 20px", zIndex: 100 }}>
-      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #2C2C2E" }}>
-        <div style={{ color: "#fff", fontWeight: 600, fontSize: 15 }}>OffshoreDesk</div>
-        <div style={{ color: "#6E6E73", fontSize: 11, marginTop: 2 }}>Gestion de comptes</div>
+    <div style={{
+      position: "fixed", left: 0, top: 0, bottom: 0, width: 220,
+      background: t.sidebar, display: "flex", flexDirection: "column",
+      padding: "0 0 20px", zIndex: 100, transition: "background 0.2s",
+      borderRight: `1px solid ${dark ? "#1C1C1E" : "#2C2C2E"}`
+    }}>
+      {/* Logo */}
+      <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${dark ? "#1C1C1E" : "#2C2C2E"}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #0A84FF, #BF5AF2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
+            🏦
+          </div>
+          <div>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, letterSpacing: "-0.3px" }}>OffshoreDesk</div>
+            <div style={{ color: "#6E6E73", fontSize: 10, marginTop: 1 }}>Admin</div>
+          </div>
+        </div>
       </div>
+
+      {/* Nav */}
       <nav style={{ flex: 1, padding: "12px 10px" }}>
         {items.map(item => (
           <button key={item.id} onClick={() => navigate(item.id)}
             style={{
-              display: "flex", alignItems: "center", width: "100%", padding: "9px 12px",
-              borderRadius: 8, border: "none", cursor: "pointer",
-              background: page === item.id ? "#2C2C2E" : "transparent",
+              display: "flex", alignItems: "center", gap: 10, width: "100%",
+              padding: "9px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+              background: page === item.id ? t.sidebarActive : "transparent",
               color: page === item.id ? "#fff" : "#8E8E93",
               fontSize: 13, fontWeight: page === item.id ? 500 : 400,
-              marginBottom: 2, textAlign: "left"
-            }}>{item.label}</button>
+              marginBottom: 2, textAlign: "left", transition: "all 0.15s"
+            }}>
+            <span style={{ fontSize: 14 }}>{item.emoji}</span>
+            {item.label}
+            {page === item.id && <div style={{ marginLeft: "auto", width: 4, height: 4, borderRadius: "50%", background: "#0A84FF" }} />}
+          </button>
         ))}
       </nav>
+
+      {/* Bottom */}
       <div style={{ padding: "0 10px" }}>
         <button onClick={() => navigate("new-client")}
-          style={{ width: "100%", padding: "10px 12px", borderRadius: 8, background: "#0A84FF", border: "none", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+          style={{
+            width: "100%", padding: "10px 12px", borderRadius: 8,
+            background: "linear-gradient(135deg, #0A84FF, #BF5AF2)",
+            border: "none", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+            boxShadow: "0 4px 12px rgba(10, 132, 255, 0.3)"
+          }}>
           + Nouveau client
         </button>
       </div>
@@ -107,7 +152,7 @@ function Sidebar({ page, navigate }) {
   );
 }
 
-function TopBar({ page, onLogout, user, navigate }) {
+function TopBar({ page, onLogout, user, navigate, t, dark, setDark }) {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
@@ -132,8 +177,13 @@ function TopBar({ page, onLogout, user, navigate }) {
   }, [search]);
 
   return (
-    <div style={{ background: "#fff", borderBottom: "1px solid #E5E5EA", padding: "0 32px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
-      <h1 style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1E", margin: 0 }}>{titles[page]}</h1>
+    <div style={{
+      background: t.card, borderBottom: `1px solid ${t.border}`,
+      padding: "0 32px", height: 56, display: "flex", alignItems: "center",
+      justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50,
+      transition: "background 0.2s"
+    }}>
+      <h1 style={{ fontSize: 16, fontWeight: 700, color: t.text, margin: 0 }}>{titles[page]}</h1>
 
       <div style={{ position: "relative", flex: 1, maxWidth: 320, margin: "0 24px" }}>
         <input
@@ -142,38 +192,43 @@ function TopBar({ page, onLogout, user, navigate }) {
           onBlur={() => setTimeout(() => setShowResults(false), 200)}
           onFocus={() => search.length >= 2 && setShowResults(true)}
           placeholder="🔍 Rechercher un client..."
-          style={{ width: "100%", padding: "8px 14px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13, boxSizing: "border-box", background: "#F7F6F3", outline: "none" }}
+          style={{
+            width: "100%", padding: "8px 14px", borderRadius: 20,
+            border: `1px solid ${t.border}`, fontSize: 13, boxSizing: "border-box",
+            background: t.bgSub, outline: "none", color: t.text, transition: "all 0.2s"
+          }}
         />
         {showResults && results.length > 0 && (
-          <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: 10, border: "1px solid #E5E5EA", boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 200, overflow: "hidden", marginTop: 4 }}>
+          <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: t.card, borderRadius: 10, border: `1px solid ${t.border}`, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 200, overflow: "hidden", marginTop: 4 }}>
             {results.map(client => (
               <div key={client.id}
                 onMouseDown={() => { navigate("client-detail", client); setSearch(""); setShowResults(false); }}
-                style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #F2F2F7", display: "flex", alignItems: "center", gap: 10 }}
-                onMouseEnter={e => e.currentTarget.style.background = "#F7F6F3"}
-                onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
-                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#E8F0FF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#1B4FD8", flexShrink: 0 }}>
+                style={{ padding: "10px 14px", cursor: "pointer", borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 10, color: t.text }}
+                onMouseEnter={e => e.currentTarget.style.background = t.bgSub}
+                onMouseLeave={e => e.currentTarget.style.background = t.card}>
+                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, #0A84FF22, #BF5AF222)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#0A84FF", flexShrink: 0 }}>
                   {client.prenom[0]}{client.nom[0]}
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "#1C1C1E" }}>{client.prenom} {client.nom}</div>
-                  <div style={{ fontSize: 11, color: "#8E8E93" }}>{client.email} · {client.pays}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{client.prenom} {client.nom}</div>
+                  <div style={{ fontSize: 11, color: t.textSub }}>{client.email} · {client.pays}</div>
                 </div>
               </div>
             ))}
           </div>
         )}
-        {showResults && search.length >= 2 && results.length === 0 && (
-          <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: 10, border: "1px solid #E5E5EA", padding: "12px 14px", fontSize: 13, color: "#8E8E93", marginTop: 4 }}>
-            Aucun client trouvé
-          </div>
-        )}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 13, color: "#8E8E93" }}>{user.email}</span>
+        <button onClick={() => setDark(!dark)}
+          style={{ fontSize: 18, background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: 8 }}>
+          {dark ? "☀️" : "🌙"}
+        </button>
+        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg, #0A84FF, #BF5AF2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700 }}>
+          {user.email[0].toUpperCase()}
+        </div>
         <button onClick={onLogout}
-          style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "none", border: "1px solid #E5E5EA", cursor: "pointer", color: "#8E8E93" }}>
+          style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "none", border: `1px solid ${t.border}`, cursor: "pointer", color: t.textSub }}>
           Déconnexion
         </button>
       </div>
