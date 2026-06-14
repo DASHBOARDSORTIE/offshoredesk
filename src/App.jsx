@@ -49,14 +49,13 @@ export default function App() {
   }
 
   const isAdmin = session.user.email === ADMIN_EMAIL;
-
   if (!isAdmin) return <ClientPortal user={session.user} onLogout={() => signOut()} />;
 
   return (
     <div style={{ minHeight: "100vh", background: "#F7F6F3", fontFamily: "'Inter', system-ui, sans-serif" }}>
       <Sidebar page={page} navigate={navigate} />
       <div style={{ marginLeft: 220, minHeight: "100vh" }}>
-        <TopBar page={page} onLogout={() => signOut()} user={session.user} />
+        <TopBar page={page} onLogout={() => signOut()} user={session.user} navigate={navigate} />
         <main style={{ padding: "28px 32px" }}>
           {page === "dashboard" && <Dashboard navigate={navigate} />}
           {page === "clients" && <Clients navigate={navigate} />}
@@ -108,14 +107,69 @@ function Sidebar({ page, navigate }) {
   );
 }
 
-function TopBar({ page, onLogout, user }) {
+function TopBar({ page, onLogout, user, navigate }) {
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState([]);
+  const [showResults, setShowResults] = useState(false);
+
   const titles = {
     dashboard: "Vue globale", clients: "Clients", "client-detail": "Dossier client",
     tickets: "Tickets", onboarding: "Formulaire", "new-client": "Nouveau dossier", agenda: "Agenda"
   };
+
+  useEffect(() => {
+    if (search.length < 2) { setResults([]); setShowResults(false); return; }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("id, nom, prenom, email, pays, type_compte")
+        .or(`nom.ilike.%${search}%,prenom.ilike.%${search}%,email.ilike.%${search}%`)
+        .limit(5);
+      setResults(data || []);
+      setShowResults(true);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   return (
     <div style={{ background: "#fff", borderBottom: "1px solid #E5E5EA", padding: "0 32px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
       <h1 style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1E", margin: 0 }}>{titles[page]}</h1>
+
+      <div style={{ position: "relative", flex: 1, maxWidth: 320, margin: "0 24px" }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onBlur={() => setTimeout(() => setShowResults(false), 200)}
+          onFocus={() => search.length >= 2 && setShowResults(true)}
+          placeholder="🔍 Rechercher un client..."
+          style={{ width: "100%", padding: "8px 14px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13, boxSizing: "border-box", background: "#F7F6F3", outline: "none" }}
+        />
+        {showResults && results.length > 0 && (
+          <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: 10, border: "1px solid #E5E5EA", boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 200, overflow: "hidden", marginTop: 4 }}>
+            {results.map(client => (
+              <div key={client.id}
+                onMouseDown={() => { navigate("client-detail", client); setSearch(""); setShowResults(false); }}
+                style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #F2F2F7", display: "flex", alignItems: "center", gap: 10 }}
+                onMouseEnter={e => e.currentTarget.style.background = "#F7F6F3"}
+                onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#E8F0FF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#1B4FD8", flexShrink: 0 }}>
+                  {client.prenom[0]}{client.nom[0]}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: "#1C1C1E" }}>{client.prenom} {client.nom}</div>
+                  <div style={{ fontSize: 11, color: "#8E8E93" }}>{client.email} · {client.pays}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {showResults && search.length >= 2 && results.length === 0 && (
+          <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderRadius: 10, border: "1px solid #E5E5EA", padding: "12px 14px", fontSize: 13, color: "#8E8E93", marginTop: 4 }}>
+            Aucun client trouvé
+          </div>
+        )}
+      </div>
+
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ fontSize: 13, color: "#8E8E93" }}>{user.email}</span>
         <button onClick={onLogout}
