@@ -79,6 +79,7 @@ export const PAYS_DISPONIBLES = [
   { nom: "Belgique", type: ["Nominatif", "Anonyme"], delai: "5-7 jours", frais: "150€", flag: "🇧🇪" },
   { nom: "Malte", type: ["Nominatif"], delai: "7-14 jours", frais: "250€", flag: "🇲🇹" },
   { nom: "Hollande", type: ["Nominatif", "Anonyme"], delai: "5-7 jours", frais: "150€", flag: "🇳🇱" },
+  { nom: "Estonie", type: ["Nominatif"], delai: "5-7 jours", frais: "150€", flag: "🇪🇪" },
 ];
 
 export const DOCS_LABELS = {
