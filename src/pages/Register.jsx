@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { signUp } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 
 export default function Register({ onRegister }) {
@@ -21,19 +20,14 @@ export default function Register({ onRegister }) {
 
     setLoading(true);
     try {
-      const { data, error: signUpError } = await signUp(email, password);
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { nom, prenom, tel }
+        }
+      });
       if (signUpError) throw signUpError;
-
-      if (data?.user) {
-        const { error: profilError } = await supabase.from("profils").insert([{
-          user_id: data.user.id,
-          email,
-          nom,
-          prenom,
-          tel,
-        }]);
-        if (profilError) throw new Error("Erreur profil : " + profilError.message);
-      }
       setSuccess(true);
     } catch (e) {
       setError("Erreur : " + e.message);
