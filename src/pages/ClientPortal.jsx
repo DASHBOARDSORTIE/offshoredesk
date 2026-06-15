@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { signOut } from "../lib/auth";
 import Agenda from "./Agenda";
-import Chat from "./Chat";
+import FloatingChat from "./FloatingChat";
 
 export default function ClientPortal({ user, onLogout }) {
   const [profil, setProfil] = useState(null);
@@ -174,6 +174,10 @@ export default function ClientPortal({ user, onLogout }) {
           </div>
         )}
       </div>
+
+      {dossiers.length > 0 && (
+        <FloatingChat isAdmin={false} clientId={dossiers[0]?.id} clientNom={`${profil.prenom} ${profil.nom}`} />
+      )}
     </div>
   );
 }
@@ -185,7 +189,12 @@ function NouveauDossier({ profil, onCreated, onCancel, theme }) {
   const [typeCompte, setTypeCompte] = useState("");
   const [pays, setPays] = useState("");
   const [loading, setLoading] = useState(false);
-  const PAYS = ["Belgique", "Malte", "Hollande"];
+  const PAYS = [
+    { nom: "Belgique", flag: "🇧🇪" },
+    { nom: "Malte", flag: "🇲🇹" },
+    { nom: "Hollande", flag: "🇳🇱" },
+    { nom: "Estonie", flag: "🇪🇪" },
+  ];
 
   async function creer() {
     if (!typeCompte || !pays) return alert("Veuillez choisir un type de compte et un pays");
@@ -269,11 +278,12 @@ function NouveauDossier({ profil, onCreated, onCancel, theme }) {
 
       <div style={{ marginBottom: 20 }}>
         <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.textSub, marginBottom: 8 }}>Pays / Juridiction</label>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
           {PAYS.map(p => (
-            <button key={p} onClick={() => setPays(p)}
-              style={{ padding: "12px", borderRadius: 10, cursor: "pointer", border: `2px solid ${pays === p ? "#0A84FF" : theme.border}`, background: pays === p ? "#F0F7FF" : theme.card, fontSize: 13, fontWeight: 500, color: theme.text }}>
-              {p}
+            <button key={p.nom} onClick={() => setPays(p.nom)}
+              style={{ padding: "12px 8px", borderRadius: 10, cursor: "pointer", textAlign: "center", border: `2px solid ${pays === p.nom ? "#0A84FF" : theme.border}`, background: pays === p.nom ? "#F0F7FF" : theme.card }}>
+              <div style={{ fontSize: 24, marginBottom: 4 }}>{p.flag}</div>
+              <div style={{ fontSize: 11, fontWeight: 500, color: theme.text }}>{p.nom}</div>
             </button>
           ))}
         </div>
@@ -299,15 +309,6 @@ function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setD
   const [newTicket, setNewTicket] = useState(false);
   const [ticketTitre, setTicketTitre] = useState("");
   const [ticketMsg, setTicketMsg] = useState("");
-  const [msgNonLus, setMsgNonLus] = useState(0);
-
-  useEffect(() => { countMsgNonLus(); }, []);
-
-  async function countMsgNonLus() {
-    const { count } = await supabase.from("messages").select("*", { count: "exact", head: true })
-      .eq("client_id", dossier.id).eq("auteur", "admin").eq("lu", false);
-    setMsgNonLus(count || 0);
-  }
 
   async function envoyerTicket() {
     if (!ticketTitre || !ticketMsg) return;
@@ -370,19 +371,11 @@ function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setD
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-          {[
-            { id: "docs", label: "Documents" },
-            { id: "chat", label: `💬 Chat${msgNonLus > 0 ? ` (${msgNonLus})` : ""}` },
-            { id: "tickets", label: `Tickets (${tickets.length})` },
-          ].map(tab => (
-            <button key={tab.id} onClick={() => { setActiveTab(tab.id); if (tab.id === "chat") setMsgNonLus(0); }}
-              style={{
-                padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: 500,
-                border: `1px solid ${activeTab === tab.id ? theme.text : theme.border}`,
-                cursor: "pointer",
-                background: activeTab === tab.id ? theme.text : theme.card,
-                color: activeTab === tab.id ? (darkMode ? "#000" : "#fff") : tab.id === "chat" && msgNonLus > 0 ? "#0A84FF" : theme.textSub
-              }}>{tab.label}</button>
+          {[{ id: "docs", label: "Documents" }, { id: "tickets", label: `Tickets (${tickets.length})` }].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              style={{ padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: `1px solid ${activeTab === tab.id ? theme.text : theme.border}`, cursor: "pointer", background: activeTab === tab.id ? theme.text : theme.card, color: activeTab === tab.id ? (darkMode ? "#000" : "#fff") : theme.textSub }}>
+              {tab.label}
+            </button>
           ))}
         </div>
 
@@ -393,16 +386,6 @@ function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setD
               const existing = (dossier.documents || []).find(d => d.type === doc.type);
               return <UploadDoc key={doc.type} doc={doc} existing={existing} clientId={dossier.id} theme={theme} />;
             })}
-          </div>
-        )}
-
-        {activeTab === "chat" && (
-          <div style={{ background: theme.card, borderRadius: 14, border: `1px solid ${theme.border}`, overflow: "hidden" }}>
-            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${theme.border}` }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>Chat avec votre conseiller</div>
-              <div style={{ fontSize: 12, color: theme.textSub, marginTop: 2 }}>Messages en temps réel</div>
-            </div>
-            <Chat clientId={dossier.id} isAdmin={false} clientNom={`${profil.prenom} ${profil.nom}`} />
           </div>
         )}
 
@@ -444,6 +427,8 @@ function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setD
           </div>
         )}
       </div>
+
+      <FloatingChat isAdmin={false} clientId={dossier.id} clientNom={`${profil.prenom} ${profil.nom}`} />
     </div>
   );
 }

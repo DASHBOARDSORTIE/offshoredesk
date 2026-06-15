@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "./lib/supabase";
 import { signOut } from "./lib/auth";
 import Login from "./pages/Login";
@@ -11,6 +11,7 @@ import Tickets from "./pages/Tickets";
 import Onboarding from "./pages/Onboarding";
 import NewClient from "./pages/NewClient";
 import Agenda from "./pages/Agenda";
+import FloatingChat from "./pages/FloatingChat";
 
 const ADMIN_EMAIL = "stevemachado33@gmail.com";
 
@@ -78,6 +79,7 @@ export default function App() {
           {page === "agenda" && <Agenda user={session.user} isAdmin={true} />}
         </main>
       </div>
+      <FloatingChat isAdmin={true} />
     </div>
   );
 }
