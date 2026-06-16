@@ -82,13 +82,33 @@ export default function Agenda({ user, isAdmin }) {
       }
     }
 
-    if (!isAdmin) {
-      const { data: myClient } = await supabase
-        .from("clients")
+    if (!isAdmin && user) {
+      // Chercher via profil
+      const { data: profil } = await supabase
+        .from("profils")
         .select("id")
         .eq("user_id", user.id)
         .maybeSingle();
-      if (myClient) setMyClientId(myClient.id);
+
+      if (profil) {
+        const { data: clientData } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("profil_id", profil.id)
+          .limit(1)
+          .maybeSingle();
+        if (clientData) setMyClientId(clientData.id);
+      }
+
+      // Fallback : chercher via user_id directement
+      if (!myClientId) {
+        const { data: clientDirect } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (clientDirect) setMyClientId(clientDirect.id);
+      }
     }
 
     setLoading(false);
@@ -107,8 +127,8 @@ export default function Agenda({ user, isAdmin }) {
         client_id: myClientId,
         user_id: user.id,
         date: modalCreneau.date,
-        heure_debut: modalCreneau.heure,
-        heure_fin: fin,
+        heure_debut: modalCreneau.heure + ":00",
+        heure_fin: fin + ":00",
         note: note,
         statut: "confirme"
       }]);
@@ -187,36 +207,26 @@ export default function Agenda({ user, isAdmin }) {
                   const isMyRes = res && res.client_id === myClientId;
                   const isPast = new Date(`${formatDate(jour)}T${heure}`) < new Date();
                   const couleur = res ? getCouleurClient(res.client_id, clientIds) : null;
+                  const canClick = !res && !isPast && !isAdmin && myClientId;
 
                   return (
-                    <div key={i} onClick={() => {
-                      if (!res && !isPast && !isAdmin && myClientId) {
-                        setModalCreneau({ date: formatDate(jour), heure });
-                      }
-                    }}
+                    <div key={i}
+                      onClick={() => canClick && setModalCreneau({ date: formatDate(jour), heure })}
                       style={{
                         borderLeft: "1px solid #F2F2F7",
                         padding: "2px 4px",
-                        cursor: !res && !isPast && !isAdmin && myClientId ? "pointer" : "default",
-                        background: !res && !isPast && !isAdmin && myClientId ? "transparent" : "transparent",
+                        cursor: canClick ? "pointer" : "default",
                         transition: "background 0.1s",
-                        position: "relative"
                       }}
-                      onMouseEnter={e => { if (!res && !isPast && !isAdmin && myClientId) e.currentTarget.style.background = "#F0F7FF"; }}
+                      onMouseEnter={e => { if (canClick) e.currentTarget.style.background = "#F0F7FF"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                     >
                       {res && (
                         <div style={{
                           background: isAdmin || isMyRes ? couleur : "#E5E5EA",
-                          borderRadius: 6,
-                          padding: "4px 8px",
-                          fontSize: 11,
+                          borderRadius: 6, padding: "4px 8px", fontSize: 11,
                           color: isAdmin || isMyRes ? "#fff" : "#8E8E93",
-                          fontWeight: 500,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 4
+                          fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4
                         }}>
                           <span>
                             {isAdmin
@@ -243,7 +253,10 @@ export default function Agenda({ user, isAdmin }) {
 
       {!isAdmin && (
         <div style={{ marginTop: 12, fontSize: 12, color: "#8E8E93", textAlign: "center" }}>
-          Cliquez sur un créneau disponible pour réserver · Les créneaux gris sont pris par d'autres clients
+          {myClientId
+            ? "Cliquez sur un créneau disponible pour réserver · Les créneaux gris sont pris par d'autres clients"
+            : "⚠️ Votre dossier n'est pas encore lié — contactez votre conseiller pour prendre un RDV"
+          }
         </div>
       )}
 
@@ -252,11 +265,12 @@ export default function Agenda({ user, isAdmin }) {
           <div style={{ background: "#fff", borderRadius: 16, padding: "28px 32px", width: 380, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
             <div style={{ fontSize: 17, fontWeight: 700, color: "#1C1C1E", marginBottom: 4 }}>Confirmer la réservation</div>
             <div style={{ fontSize: 13, color: "#8E8E93", marginBottom: 20 }}>
-              {modalCreneau.date} à {modalCreneau.heure} — {modalCreneau.heure.split(":")[0]}:{parseInt(modalCreneau.heure.split(":")[1]) + 30 === 60 ? "00" : (parseInt(modalCreneau.heure.split(":")[1]) + 30).toString().padStart(2, "0")}
+              {modalCreneau.date} à {modalCreneau.heure}
             </div>
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "#3C3C43", marginBottom: 6 }}>Note (optionnel)</label>
-              <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Ex: ouverture compte Malte..." rows={3}
+              <textarea value={note} onChange={e => setNote(e.target.value)}
+                placeholder="Ex: ouverture compte Malte..." rows={3}
                 style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13, resize: "none", boxSizing: "border-box" }} />
             </div>
             <div style={{ display: "flex", gap: 10 }}>
