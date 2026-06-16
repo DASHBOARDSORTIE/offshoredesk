@@ -32,7 +32,7 @@ export default function ClientPortal({ user, onLogout }) {
     if (profilData) {
       setProfil(profilData);
       const { data: dossiersData } = await supabase
-        .from("clients").select("*, documents(*), tickets(*)")
+        .from("clients").select("*, tickets(*)")
         .eq("profil_id", profilData.id).order("created_at", { ascending: false });
       setDossiers(dossiersData || []);
     }
@@ -305,10 +305,24 @@ function NouveauDossier({ profil, onCreated, onCancel, theme }) {
 
 function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setDarkMode, theme }) {
   const [activeTab, setActiveTab] = useState("docs");
-  const [tickets, setTickets] = useState(dossier.tickets || []);
+  const [tickets, setTickets] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [newTicket, setNewTicket] = useState(false);
   const [ticketTitre, setTicketTitre] = useState("");
   const [ticketMsg, setTicketMsg] = useState("");
+
+  useEffect(() => {
+    loadDossierData();
+  }, [dossier.id]);
+
+  async function loadDossierData() {
+    const [{ data: ticketsData }, { data: docsData }] = await Promise.all([
+      supabase.from("tickets").select("*").eq("client_id", dossier.id).order("created_at", { ascending: false }),
+      supabase.from("documents").select("*").eq("client_id", dossier.id)
+    ]);
+    setTickets(ticketsData || []);
+    setDocuments(docsData || []);
+  }
 
   async function envoyerTicket() {
     if (!ticketTitre || !ticketMsg) return;
@@ -316,8 +330,7 @@ function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setD
       client_id: dossier.id, titre: ticketTitre, message: ticketMsg, auteur: "client", statut: "ouvert", priorite: "normal"
     }]);
     setTicketTitre(""); setTicketMsg(""); setNewTicket(false);
-    const { data } = await supabase.from("tickets").select("*").eq("client_id", dossier.id);
-    setTickets(data || []);
+    loadDossierData();
   }
 
   const DOCS_REQUIS = [
@@ -383,8 +396,17 @@ function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setD
           <div style={{ background: theme.card, borderRadius: 14, border: `1px solid ${theme.border}`, padding: "20px 24px" }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: theme.text, marginBottom: 16 }}>Documents requis</div>
             {DOCS_REQUIS.map(doc => {
-              const existing = (dossier.documents || []).find(d => d.type === doc.type);
-              return <UploadDoc key={doc.type} doc={doc} existing={existing} clientId={dossier.id} theme={theme} />;
+              const existing = documents.find(d => d.type === doc.type);
+              return (
+                <UploadDoc
+                  key={doc.type}
+                  doc={doc}
+                  existing={existing}
+                  clientId={dossier.id}
+                  theme={theme}
+                  onUploaded={loadDossierData}
+                />
+              );
             })}
           </div>
         )}
@@ -433,9 +455,14 @@ function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setD
   );
 }
 
-function UploadDoc({ doc, existing, clientId, theme }) {
+function UploadDoc({ doc, existing, clientId, theme, onUploaded }) {
   const [loading, setLoading] = useState(false);
   const [localExisting, setLocalExisting] = useState(existing);
+
+  useEffect(() => {
+    setLocalExisting(existing);
+  }, [existing]);
+
   const statut = localExisting?.statut || "manquant";
 
   const handleFile = async (e) => {
@@ -457,6 +484,7 @@ function UploadDoc({ doc, existing, clientId, theme }) {
         description: `Document uploadé : ${doc.label}`, auteur: "client"
       }]);
       setLocalExisting({ statut: "ok", nom_fichier: file.name });
+      if (onUploaded) onUploaded();
     } catch (err) {
       alert("Erreur : " + err.message);
     } finally {
@@ -471,7 +499,9 @@ function UploadDoc({ doc, existing, clientId, theme }) {
         <div style={{ fontSize: 13, fontWeight: 500, color: theme.text }}>{doc.label}</div>
         <div style={{ fontSize: 11, color: theme.textSub, marginTop: 2 }}>{localExisting?.nom_fichier || doc.info}</div>
       </div>
-      <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500, background: statut === "ok" ? "#E8F9F0" : statut === "expire" ? "#FFF8EC" : "#FFF0EE", color: statut === "ok" ? "#1A7A4A" : statut === "expire" ? "#B7660A" : "#C0392B" }}>
+      <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500,
+        background: statut === "ok" ? "#E8F9F0" : statut === "expire" ? "#FFF8EC" : "#FFF0EE",
+        color: statut === "ok" ? "#1A7A4A" : statut === "expire" ? "#B7660A" : "#C0392B" }}>
         {statut === "ok" ? "Reçu" : statut === "expire" ? "Expiré" : "Manquant"}
       </span>
       <label style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "#0A84FF", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
