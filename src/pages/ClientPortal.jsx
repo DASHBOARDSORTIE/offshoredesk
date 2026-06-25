@@ -139,17 +139,14 @@ export default function ClientPortal({ user, onLogout }) {
                 <div key={dossier.id} onClick={() => setSelectedDossier(dossier)}
                   style={{ background: theme.card, borderRadius: 12, border: `1px solid ${theme.border}`, padding: "18px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#F0F7FF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                    {dossier.beneficiaire === "autre" ? "👤" : "🪪"}
+                    👤
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>
-                      {dossier.beneficiaire === "autre"
-                        ? `${dossier.beneficiaire_prenom} ${dossier.beneficiaire_nom}`
-                        : `${dossier.prenom} ${dossier.nom}`}
+                      {dossier.beneficiaire_prenom} {dossier.beneficiaire_nom}
                     </div>
                     <div style={{ fontSize: 12, color: theme.textSub, marginTop: 2 }}>
                       {dossier.type_compte} · {dossier.pays}
-                      {dossier.beneficiaire === "autre" && <span style={{ marginLeft: 8, background: "#F0F7FF", color: "#0A84FF", padding: "1px 6px", borderRadius: 4, fontSize: 11 }}>Tiers</span>}
                     </div>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
@@ -182,36 +179,47 @@ export default function ClientPortal({ user, onLogout }) {
   );
 }
 
+// ─── Pays par type ────────────────────────────────────────────────────────────
+const PAYS_NOMINATIF = [
+  { nom: "France",   flag: "🇫🇷" },
+  { nom: "Belgique", flag: "🇧🇪" },
+  { nom: "Hollande", flag: "🇳🇱" },
+];
+
+const PAYS_ANONYME = [
+  { nom: "Angleterre", flag: "🇬🇧" },
+  { nom: "Malte",      flag: "🇲🇹" },
+  { nom: "France",     flag: "🇫🇷" },
+  { nom: "Belgique",   flag: "🇧🇪" },
+  { nom: "Hollande",   flag: "🇳🇱" },
+  { nom: "Espagne",    flag: "🇪🇸" },
+];
+
 function NouveauDossier({ profil, onCreated, onCancel, theme }) {
-  const [beneficiaire, setBeneficiaire] = useState("soi-meme");
   const [benefNom, setBenefNom] = useState("");
   const [benefPrenom, setBenefPrenom] = useState("");
   const [typeCompte, setTypeCompte] = useState("");
   const [pays, setPays] = useState("");
   const [loading, setLoading] = useState(false);
-  const PAYS = [
-    { nom: "Belgique", flag: "🇧🇪" },
-    { nom: "Malte", flag: "🇲🇹" },
-    { nom: "Hollande", flag: "🇳🇱" },
-    { nom: "Estonie", flag: "🇪🇪" },
-  ];
+
+  const paysDisponibles = typeCompte === "Nominatif" ? PAYS_NOMINATIF : typeCompte === "Anonyme" ? PAYS_ANONYME : [];
 
   async function creer() {
     if (!typeCompte || !pays) return alert("Veuillez choisir un type de compte et un pays");
-    if (beneficiaire === "autre" && (!benefNom || !benefPrenom)) return alert("Veuillez renseigner le nom et prénom du bénéficiaire");
+    if (!benefNom || !benefPrenom) return alert("Veuillez renseigner le nom et prénom du bénéficiaire");
     setLoading(true);
     try {
       const { data: newClient } = await supabase.from("clients").insert([{
         profil_id: profil.id,
-        nom: beneficiaire === "autre" ? benefNom : profil.nom,
-        prenom: beneficiaire === "autre" ? benefPrenom : profil.prenom,
+        nom: benefNom,
+        prenom: benefPrenom,
         email: profil.email,
         tel: profil.tel,
         type_compte: typeCompte,
         pays,
-        beneficiaire,
-        beneficiaire_nom: beneficiaire === "autre" ? benefNom : null,
-        beneficiaire_prenom: beneficiaire === "autre" ? benefPrenom : null,
+        beneficiaire: "autre",
+        beneficiaire_nom: benefNom,
+        beneficiaire_prenom: benefPrenom,
         statut: "doc_manquant",
         progression: 0,
       }]).select().single();
@@ -236,39 +244,29 @@ function NouveauDossier({ profil, onCreated, onCancel, theme }) {
     <div style={{ background: theme.card, borderRadius: 14, border: `1px solid ${theme.border}`, padding: "24px", marginBottom: 16 }}>
       <div style={{ fontSize: 15, fontWeight: 600, color: theme.text, marginBottom: 20 }}>Nouvelle demande d'ouverture</div>
 
+      {/* Bénéficiaire */}
       <div style={{ marginBottom: 16 }}>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.textSub, marginBottom: 8 }}>Ce compte est pour :</label>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {[{ id: "soi-meme", label: "Moi-même", icon: "🪪" }, { id: "autre", label: "Une autre personne", icon: "👤" }].map(opt => (
-            <button key={opt.id} onClick={() => setBeneficiaire(opt.id)}
-              style={{ padding: "14px", borderRadius: 10, cursor: "pointer", textAlign: "left", border: `2px solid ${beneficiaire === opt.id ? "#0A84FF" : theme.border}`, background: beneficiaire === opt.id ? "#F0F7FF" : theme.card }}>
-              <div style={{ fontSize: 20, marginBottom: 4 }}>{opt.icon}</div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: theme.text }}>{opt.label}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {beneficiaire === "autre" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.textSub, marginBottom: 8 }}>Informations du bénéficiaire</label>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.textSub, marginBottom: 6 }}>Prénom</label>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.textSub, marginBottom: 6 }}>Prénom *</label>
             <input value={benefPrenom} onChange={e => setBenefPrenom(e.target.value)} placeholder="Prénom"
               style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${theme.border}`, fontSize: 13, boxSizing: "border-box", background: theme.card, color: theme.text }} />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.textSub, marginBottom: 6 }}>Nom</label>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.textSub, marginBottom: 6 }}>Nom *</label>
             <input value={benefNom} onChange={e => setBenefNom(e.target.value)} placeholder="Nom"
               style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${theme.border}`, fontSize: 13, boxSizing: "border-box", background: theme.card, color: theme.text }} />
           </div>
         </div>
-      )}
+      </div>
 
+      {/* Type de compte */}
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.textSub, marginBottom: 8 }}>Type de compte</label>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {["Nominatif", "Anonyme"].map(type => (
-            <button key={type} onClick={() => setTypeCompte(type)}
+            <button key={type} onClick={() => { setTypeCompte(type); setPays(""); }}
               style={{ padding: "12px", borderRadius: 10, cursor: "pointer", border: `2px solid ${typeCompte === type ? "#0A84FF" : theme.border}`, background: typeCompte === type ? "#F0F7FF" : theme.card, fontSize: 13, fontWeight: 500, color: theme.text }}>
               {type === "Nominatif" ? "🪪 Nominatif" : "🔒 Anonyme"}
             </button>
@@ -276,18 +274,21 @@ function NouveauDossier({ profil, onCreated, onCancel, theme }) {
         </div>
       </div>
 
-      <div style={{ marginBottom: 20 }}>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.textSub, marginBottom: 8 }}>Pays / Juridiction</label>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-          {PAYS.map(p => (
-            <button key={p.nom} onClick={() => setPays(p.nom)}
-              style={{ padding: "12px 8px", borderRadius: 10, cursor: "pointer", textAlign: "center", border: `2px solid ${pays === p.nom ? "#0A84FF" : theme.border}`, background: pays === p.nom ? "#F0F7FF" : theme.card }}>
-              <div style={{ fontSize: 24, marginBottom: 4 }}>{p.flag}</div>
-              <div style={{ fontSize: 11, fontWeight: 500, color: theme.text }}>{p.nom}</div>
-            </button>
-          ))}
+      {/* Pays — affiché seulement après choix du type */}
+      {typeCompte !== "" && (
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.textSub, marginBottom: 8 }}>Pays / Juridiction</label>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+            {paysDisponibles.map(p => (
+              <button key={p.nom} onClick={() => setPays(p.nom)}
+                style={{ padding: "12px 8px", borderRadius: 10, cursor: "pointer", textAlign: "center", border: `2px solid ${pays === p.nom ? "#0A84FF" : theme.border}`, background: pays === p.nom ? "#F0F7FF" : theme.card }}>
+                <div style={{ fontSize: 24, marginBottom: 4 }}>{p.flag}</div>
+                <div style={{ fontSize: 11, fontWeight: 500, color: theme.text }}>{p.nom}</div>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div style={{ display: "flex", gap: 10 }}>
         <button onClick={creer} disabled={loading}
@@ -311,9 +312,7 @@ function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setD
   const [ticketTitre, setTicketTitre] = useState("");
   const [ticketMsg, setTicketMsg] = useState("");
 
-  useEffect(() => {
-    loadDossierData();
-  }, [dossier.id]);
+  useEffect(() => { loadDossierData(); }, [dossier.id]);
 
   async function loadDossierData() {
     const [{ data: ticketsData }, { data: docsData }] = await Promise.all([
@@ -333,18 +332,23 @@ function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setD
     loadDossierData();
   }
 
-  const DOCS_REQUIS = [
-    { type: "cni_recto", label: "CNI — Recto", icon: "🪪", info: "Face avant" },
-    { type: "cni_verso", label: "CNI — Verso", icon: "🔄", info: "Face arrière" },
-    { type: "justif_dom", label: "Justificatif de domicile", icon: "🏠", info: "Moins de 3 mois" },
-    { type: "releve_banque", label: "Relevé bancaire (3 mois)", icon: "🏦", info: "3 derniers mois" },
-    { type: "avis_impot", label: "Avis d'imposition", icon: "📑", info: "Dernier avis" },
-    { type: "selfie", label: "Selfie de vérification", icon: "🤳", info: "CNI + date du jour" },
+  // ─── Documents en 2 sections ──────────────────────────────────────────────
+  const DOCS_IDENTITE = [
+    { type: "cni_recto",  label: "CNI — Recto",              icon: "🪪", info: "Face avant de la carte d'identité" },
+    { type: "cni_verso",  label: "CNI — Verso",              icon: "🔄", info: "Face arrière de la carte d'identité" },
+    { type: "passeport",  label: "Passeport (alternative)",   icon: "📘", info: "Page photo — si pas de CNI" },
+    { type: "justif_dom", label: "Justificatif de domicile", icon: "🏠", info: "Moins de 3 mois (facture, bail...)" },
   ];
 
-  const nomDossier = dossier.beneficiaire === "autre"
-    ? `${dossier.beneficiaire_prenom} ${dossier.beneficiaire_nom}`
-    : `${dossier.prenom} ${dossier.nom}`;
+  const DOCS_POST_RECEPTION = [
+    { type: "selfie",       label: "Selfie de vérification",       icon: "🤳", info: "CNI + date du jour + signature manuscrite" },
+    { type: "avis_impot",   label: "Avis d'imposition",            icon: "📑", info: "Dernier avis disponible" },
+    { type: "releve_banque",label: "Relevés bancaires (3 mois)",   icon: "🏦", info: "3 derniers mois consécutifs" },
+    { type: "vente_immo",   label: "Vente immobilière / SCPI",     icon: "🏠", info: "Acte ou attestation de vente" },
+    { type: "assurance_vie",label: "Assurance vie",                icon: "📋", info: "Relevé ou certificat de rachat" },
+  ];
+
+  const nomDossier = `${dossier.beneficiaire_prenom || dossier.prenom} ${dossier.beneficiaire_nom || dossier.nom}`;
 
   return (
     <div style={{ minHeight: "100vh", background: theme.bg, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -370,10 +374,7 @@ function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setD
 
         <div style={{ background: theme.card, borderRadius: 14, border: `1px solid ${theme.border}`, padding: "24px 28px", marginBottom: 20 }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: theme.text, marginBottom: 4 }}>{nomDossier}</div>
-          <div style={{ fontSize: 13, color: theme.textSub, marginBottom: 16 }}>
-            {dossier.type_compte} · {dossier.pays}
-            {dossier.beneficiaire === "autre" && <span style={{ marginLeft: 8, background: "#F0F7FF", color: "#0A84FF", padding: "2px 8px", borderRadius: 4, fontSize: 11 }}>Compte tiers</span>}
-          </div>
+          <div style={{ fontSize: 13, color: theme.textSub, marginBottom: 16 }}>{dossier.type_compte} · {dossier.pays}</div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
             <span style={{ color: theme.textSub }}>Progression</span>
             <span style={{ fontWeight: 600, color: theme.text }}>{dossier.progression}%</span>
@@ -393,21 +394,32 @@ function DossierDetail({ dossier, user, profil, onBack, onLogout, darkMode, setD
         </div>
 
         {activeTab === "docs" && (
-          <div style={{ background: theme.card, borderRadius: 14, border: `1px solid ${theme.border}`, padding: "20px 24px" }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: theme.text, marginBottom: 16 }}>Documents requis</div>
-            {DOCS_REQUIS.map(doc => {
-              const existing = documents.find(d => d.type === doc.type);
-              return (
-                <UploadDoc
-                  key={doc.type}
-                  doc={doc}
-                  existing={existing}
-                  clientId={dossier.id}
-                  theme={theme}
-                  onUploaded={loadDossierData}
-                />
-              );
-            })}
+          <div style={{ display: "grid", gap: 16 }}>
+
+            {/* Section 1 : Documents d'identité */}
+            <div style={{ background: theme.card, borderRadius: 14, border: `1px solid ${theme.border}`, padding: "20px 24px" }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: theme.text, marginBottom: 4 }}>📋 Documents d'identité</div>
+              <div style={{ fontSize: 12, color: theme.textSub, marginBottom: 16 }}>À fournir pour ouvrir le dossier</div>
+              {DOCS_IDENTITE.map(doc => {
+                const existing = documents.find(d => d.type === doc.type);
+                return <UploadDoc key={doc.type} doc={doc} existing={existing} clientId={dossier.id} theme={theme} onUploaded={loadDossierData} />;
+              })}
+            </div>
+
+            {/* Section 2 : Documents post-réception */}
+            <div style={{ background: theme.card, borderRadius: 14, border: `1px solid ${theme.border}`, padding: "20px 24px" }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: theme.text, marginBottom: 4 }}>📬 Documents post-réception</div>
+              <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
+                <div style={{ fontSize: 12, color: "#1D4ED8", lineHeight: 1.6 }}>
+                  Ces documents sont à envoyer <strong>après réception du compte bancaire</strong>. Ils justifient l'origine des fonds et seront demandés par la banque dans les 30 jours suivant l'activation.
+                </div>
+              </div>
+              {DOCS_POST_RECEPTION.map(doc => {
+                const existing = documents.find(d => d.type === doc.type);
+                return <UploadDoc key={doc.type} doc={doc} existing={existing} clientId={dossier.id} theme={theme} onUploaded={loadDossierData} />;
+              })}
+            </div>
+
           </div>
         )}
 
@@ -459,9 +471,7 @@ function UploadDoc({ doc, existing, clientId, theme, onUploaded }) {
   const [loading, setLoading] = useState(false);
   const [localExisting, setLocalExisting] = useState(existing);
 
-  useEffect(() => {
-    setLocalExisting(existing);
-  }, [existing]);
+  useEffect(() => { setLocalExisting(existing); }, [existing]);
 
   const statut = localExisting?.statut || "manquant";
 
